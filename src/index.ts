@@ -1,10 +1,25 @@
+import 'dotenv/config';
 import express from 'express';
-import {createServer} from "node:http";
+import cookieParser from 'cookie-parser';
+import { authRouter } from './routes/auth';
+import { errorMiddleware } from './middleware/error';
+import { startGrpcServer } from './grpc/server';
+
+for (const envVar of ['JWT_SECRET', 'DATABASE_URL', 'USER_SERVICE_GRPC_ADDR']) {
+  if (!process.env[envVar]) {
+    throw new Error(`${envVar} environment variable is required`);
+  }
+}
 
 const app = express();
 
-const server = createServer(app);
+app.use(cookieParser());
+app.use('/auth', authRouter);
+app.use(errorMiddleware);
 
-server.listen(3000, () => {
-    console.log(`Service listening on port 3000`)
+const PORT = process.env.PORT ?? '3000';
+app.listen(Number(PORT), () => {
+  console.log(`HTTP server listening on port ${PORT}`);
 });
+
+startGrpcServer();
