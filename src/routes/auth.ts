@@ -39,10 +39,6 @@ function clearTokenCookies(res: Response): void {
   res.clearCookie('refresh_token', { ...baseCookieOptions(), path: '/auth' });
 }
 
-function refreshTokenExpiry(): Date {
-  return new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
-}
-
 authRouter.post('/register', async (req, res) => {
   const { username, password } = validateRegister(req.body);
 
@@ -50,7 +46,7 @@ authRouter.post('/register', async (req, res) => {
   const user = await createUser(username, passwordHash);
 
   const rawToken = generateRefreshToken();
-  await insertRefreshToken(user.id, hashToken(rawToken), refreshTokenExpiry());
+  await insertRefreshToken(user.id, user.username, hashToken(rawToken));
   const accessToken = signAccessToken({ sub: user.id, username: user.username });
 
   setTokenCookies(res, accessToken, rawToken);
@@ -67,7 +63,7 @@ authRouter.post('/login', async (req, res) => {
   }
 
   const rawToken = generateRefreshToken();
-  await insertRefreshToken(user.id, hashToken(rawToken), refreshTokenExpiry());
+  await insertRefreshToken(user.id, user.username, hashToken(rawToken));
   const accessToken = signAccessToken({ sub: user.id, username: user.username });
 
   setTokenCookies(res, accessToken, rawToken);
@@ -86,7 +82,7 @@ authRouter.post('/refresh', async (req, res) => {
   }
 
   const newRawToken = generateRefreshToken();
-  await insertRefreshToken(record.user_id, hashToken(newRawToken), refreshTokenExpiry());
+  await insertRefreshToken(record.user_id, record.username, hashToken(newRawToken));
   const accessToken = signAccessToken({ sub: record.user_id, username: record.username });
 
   setTokenCookies(res, accessToken, newRawToken);

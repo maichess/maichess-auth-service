@@ -11,14 +11,14 @@ Always read contracts before implementing:
 - **REST:** `maichess-api-contracts/rest/auth.md` — register, login, refresh, logout
 - **gRPC:** `maichess-api-contracts/protos/auth-service/v1/auth.proto` — `ValidateToken`
 
-On registration, call `Users.CreateUser` via gRPC (see `maichess-api-contracts/protos/user-service/`). On login, verify credentials against PostgreSQL (read-only). Do not infer behavior from other services.
+On registration, call `Users.CreateUser` via gRPC (see `maichess-api-contracts/protos/user-service/`). On login, look up user credentials via the Database service gRPC client (`src/grpc/db-client.ts`). Do not infer behavior from other services.
 
 ## Stack
 
 - **Runtime:** Node.js, TypeScript
 - **Framework:** Express.js 5
-- **Database:** PostgreSQL (user credentials) via MCP `postgres`
-- **gRPC:** server for `ValidateToken`, client for `Users.CreateUser`
+- **Database:** User credential lookups via the Database service gRPC (`src/grpc/db-client.ts`, `USER_DB_SERVICE_GRPC_ADDR`). Refresh tokens stored in Redis via `ioredis` (`REDIS_URL`).
+- **gRPC:** server for `ValidateToken`; clients for `Users.CreateUser` and `Database.List`
 
 ## Commands
 
@@ -67,11 +67,13 @@ Do not leak internal error details in responses. Log the full error server-side.
 |---|---|
 | `PORT` | HTTP port (default `3000`) |
 | `JWT_SECRET` | Secret for signing access tokens |
-| `DATABASE_URL` | PostgreSQL connection string |
+| `REDIS_URL` | Redis connection URL (refresh tokens) |
 | `USER_SERVICE_GRPC_ADDR` | Address of the user-service gRPC server |
+| `USER_DB_SERVICE_GRPC_ADDR` | Address of the user-db database service gRPC server |
 
-## Database
+## Data storage
 
-Auth reads/writes the `users` table (owned by the user-service) for credential verification, and owns a `refresh_tokens` table. Do not write migrations that alter user-service-owned tables.
+- **User credentials:** looked up via the Database service gRPC (`src/grpc/db-client.ts`).
+- **Refresh tokens:** stored in Redis as `refresh:{tokenHash}` with a 30-day TTL. Value is `{"userId", "username"}` JSON. Rotation uses `GETDEL` for atomic consume-and-delete.
 
 Connect only when the SSH tunnel is open: `ssh -N maichess-db`.
