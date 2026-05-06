@@ -42,7 +42,7 @@ function clearTokenCookies(res: Response): void {
 authRouter.post('/register', async (req, res) => {
   const { username, password } = validateRegister(req.body);
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, 10);
   const user = await createUser(username, passwordHash);
 
   const rawToken = generateRefreshToken();
