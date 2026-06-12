@@ -24,6 +24,7 @@ On registration, call `Users.CreateUser` via gRPC (see `maichess-api-contracts/p
 
 ```bash
 npm run dev      # start with nodemon + ts-node (watch mode)
+npm test         # node:test runner over src/**/*.test.ts (ts-node/register)
 ```
 
 ## Architecture
@@ -36,6 +37,8 @@ src/
   grpc/          # gRPC server and client setup
   middleware/    # express middleware (validation, error handling)
   db/            # postgres queries — plain SQL, no ORM
+  cookies.ts     # token cookie options + paths (access_token '/', refresh_token '/api/auth')
+  tokens.ts      # JWT signing/verification + opaque refresh-token generation/hashing
   index.ts       # app bootstrap only
 ```
 

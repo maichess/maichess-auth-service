@@ -1,43 +1,14 @@
-import express, { Router, Response, CookieOptions } from 'express';
+import express, { Router } from 'express';
 import bcrypt from 'bcrypt';
 import { validateRegister, validateLogin } from '../middleware/validate';
 import { getUserByUsername, insertRefreshToken, consumeRefreshToken, deleteRefreshToken } from '../db/queries';
 import { signAccessToken, generateRefreshToken, hashToken } from '../tokens';
+import { setTokenCookies, clearTokenCookies } from '../cookies';
 import { createUser } from '../grpc/user-client';
 
 export const authRouter = Router();
 
 authRouter.use(express.json());
-
-const ACCESS_TOKEN_TTL_MS  = 15 * 60 * 1000;
-const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-
-function baseCookieOptions(): CookieOptions {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === 'true',
-    sameSite: 'lax',
-    ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {}),
-  };
-}
-
-function setTokenCookies(res: Response, accessToken: string, refreshToken: string): void {
-  res.cookie('access_token', accessToken, {
-    ...baseCookieOptions(),
-    path: '/',
-    maxAge: ACCESS_TOKEN_TTL_MS,
-  });
-  res.cookie('refresh_token', refreshToken, {
-    ...baseCookieOptions(),
-    path: '/auth',
-    maxAge: REFRESH_TOKEN_TTL_MS,
-  });
-}
-
-function clearTokenCookies(res: Response): void {
-  res.clearCookie('access_token', { ...baseCookieOptions(), path: '/' });
-  res.clearCookie('refresh_token', { ...baseCookieOptions(), path: '/auth' });
-}
 
 authRouter.post('/register', async (req, res) => {
   const { username, password } = validateRegister(req.body);
